@@ -1,0 +1,42 @@
+includes:
+    - vendor/mahocommerce/maho-phpstan-plugin/extension.neon
+    - vendor/phpstan/phpstan/conf/bleedingEdge.neon
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+
+parameters:
+    strictRules:
+        allRules: false
+        matchingInheritedMethodNames: true
+        disallowedBacktick: true
+
+    level: 8
+    tmpDir: .phpstan.cache
+    reportUnmatchedIgnoredErrors: true
+    checkFunctionNameCase: true
+    checkInternalClassCaseSensitivity: true
+    checkMissingOverrideMethodAttribute: true
+    treatPhpDocTypesAsCertain: false
+    reportMaybesInPropertyPhpDocTypes: true
+    reportMaybesInMethodSignatures: false
+
+    fileExtensions:
+        - php
+        - phtml
+
+    # The kit (and the theme package generated from it) carries the CLI
+    # utilities in lib/. A generated theme that also ships app/ code adds it
+    # to this list.
+    paths:
+        - lib
+
+    excludePaths:
+        analyse:
+            - vendor/mahocommerce/maho-phpstan-plugin/mock
+        analyseAndScan:
+            - vendor/mahocommerce/maho-phpstan-plugin/mock
+
+    ignoreErrors:
+        -
+            identifier: property.missingOverride
+            reportUnmatched: false

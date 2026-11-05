@@ -49,16 +49,18 @@ class ThemeBuildPack extends BaseMahoCommand
         bool $sourceMap = false,
         #[Option(description: 'Copy the assets back into the theme package: after the build, or after every rebuild together with --watch')]
         bool $pack = false,
+        #[Option(description: 'Do not compile the classes of the content into the copy that the store serves', name: 'no-content')]
+        bool $noContent = false,
     ): int {
         if (!$pack) {
-            return $this->runCoreBuild($output, $themeFilter, $watch, $sourceMap);
+            return $this->runCoreBuild($output, $themeFilter, $watch, $sourceMap, $noContent);
         }
 
         if ($watch) {
-            return $this->watchAndPack($output, $io, $themeFilter, $sourceMap);
+            return $this->watchAndPack($output, $io, $themeFilter, $sourceMap, $noContent);
         }
 
-        $status = $this->runCoreBuild($output, $themeFilter, false, $sourceMap);
+        $status = $this->runCoreBuild($output, $themeFilter, false, $sourceMap, $noContent);
         if ($status !== Command::SUCCESS) {
             return $status;
         }
@@ -76,8 +78,13 @@ class ThemeBuildPack extends BaseMahoCommand
      * not attached: attaching it would reset the invokable command's definition
      * and drop its options.
      */
-    private function runCoreBuild(OutputInterface $output, ?string $themeFilter, bool $watch, bool $sourceMap): int
-    {
+    private function runCoreBuild(
+        OutputInterface $output,
+        ?string $themeFilter,
+        bool $watch,
+        bool $sourceMap,
+        bool $noContent,
+    ): int {
         $params = [];
         if ($themeFilter !== null) {
             $params['--theme'] = $themeFilter;
@@ -90,6 +97,15 @@ class ThemeBuildPack extends BaseMahoCommand
         }
 
         $core = new FrontendThemeBuild();
+        // The option exists only since the content build joined the theme build
+        if ($noContent) {
+            if ($core->getDefinition()->hasOption('no-content')) {
+                $params['--no-content'] = true;
+            } else {
+                $this->warnNoContentUnsupported($output);
+            }
+        }
+
         $helperSet = $this->getHelperSet();
         if ($helperSet !== null) {
             $core->setHelperSet($helperSet);
@@ -98,12 +114,27 @@ class ThemeBuildPack extends BaseMahoCommand
     }
 
     /**
+     * The installed Maho compiles no content classes in the theme build, so there is nothing to skip.
+     */
+    private function warnNoContentUnsupported(OutputInterface $output): void
+    {
+        $output->writeln(
+            '<comment>The installed Maho does not build the content classes in this command: --no-content has no effect.</comment>',
+        );
+    }
+
+    /**
      * The core watch loop blocks until Ctrl+C, so it cannot be followed by an
      * in-process copy. Run it as a child process and pack on every rebuild
      * (Tailwind prints `Done in …`), with no filesystem polling.
      */
-    private function watchAndPack(OutputInterface $output, SymfonyStyle $io, ?string $themeFilter, bool $sourceMap): int
-    {
+    private function watchAndPack(
+        OutputInterface $output,
+        SymfonyStyle $io,
+        ?string $themeFilter,
+        bool $sourceMap,
+        bool $noContent,
+    ): int {
         $root = \Maho::getBasePath();
         $build = [PHP_BINARY, $root . '/maho', 'dev:frontend:theme:build', '--watch'];
         if ($themeFilter !== null) {
@@ -112,6 +143,13 @@ class ThemeBuildPack extends BaseMahoCommand
         }
         if ($sourceMap) {
             $build[] = '--map';
+        }
+        if ($noContent) {
+            if (new FrontendThemeBuild()->getDefinition()->hasOption('no-content')) {
+                $build[] = '--no-content';
+            } else {
+                $this->warnNoContentUnsupported($output);
+            }
         }
 
         $io->text([

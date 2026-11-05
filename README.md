@@ -100,6 +100,12 @@ Maho core, and without `--pack` the behaviour is identical to the core command.
 | `--theme <pkg>/<theme>` | limit the build to one theme (core option, forwarded) |
 | `--watch` | rebuild on change (core option) |
 | `--map` | inline source map (core option) |
+| `--no-content` | do not compile the classes of the content into the copy that the store serves (core option, forwarded) |
+
+`--no-content` is forwarded only when the installed Maho declares it, that is
+when its `dev:frontend:theme:build` also runs the content build. On an older
+Maho the command has nothing to skip, so the option is accepted and prints a
+line that it has no effect.
 
 The copy prints **every file** it copies or removes, with its **real destination**
 inside the package, so you can see exactly what changed and where:
